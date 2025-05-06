@@ -1,0 +1,161 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Session;
+use Carbon\Carbon;
+
+class ReservationController extends Controller
+{
+    public function listReservations()
+    {
+        // Se asume que en la sesión se guardó 'restaurante_id' y 'jwt'
+        $restaurantId = Session::get('restaurante_id');
+        $response = Http::withToken(Session::get('jwt'))
+            ->get(config('services.identity.url') . "/odata/Reservas", [
+                // Aunque el endpoint utiliza el token para obtener el restaurante,
+                // se puede enviar el parámetro para claridad (opcional)
+                'restauranteId' => $restaurantId
+            ]);
+            
+        if (!$response->ok()) {
+            return back()->withErrors(['error' => 'No se pudieron obtener las reservas.']);
+        }
+        
+        // Se espera que API retorne un array de reservas
+        $reservas = $response->json();
+        
+        return view('reservations.list', compact('reservas', 'restaurantId'));
+    }
+            // Mostrar el formulario de creación de reserva
+    // Al pasar la fecha (opcional vía query string) se consultan los turnos disponibles
+    public function createReservation(Request $request)
+    {
+        $fecha = $request->query('fecha') ?? date('Y-m-d');  // Obtiene la fecha actual si no se envía una, es decir hoy
+        // Se asume que en la sesión se guardó 'restaurante_id' y 'jwt'
+        $restaurantId = Session::get('restaurante_id');
+
+        // Consulta a la API de slots (endpoint: GET /api/reservas/slots?restauranteId=...&fecha=...)
+        $response = Http::withToken(Session::get('jwt'))
+            ->get(config('services.identity.url') . "/reservas/slots", [
+                'restauranteId' => $restaurantId,
+                'fecha' => $fecha,
+            ]);
+        $slots = [];
+        if ($response->ok()) {
+            $slots = $response->json();
+        }
+        
+        return view('reservations.create', compact('slots', 'fecha'));
+    }
+    
+        // Procesar el envío para crear la reserva
+    public function storeReservation(Request $request)
+    {
+        $data = $request->validate([
+            'nombreCliente'      => 'required|string|max:255',
+            'email'              => 'required|email',
+            'fechaReserva'       => 'required|date',
+            'numeroComensales'   => 'required|integer|min:1',
+            'notas'              => 'nullable|string',
+            'turnoId'            => 'required|string', // Asegúrate de que el tipo coincida con el de la API
+        ]);
+    
+        $restaurantId = Session::get('restaurante_id');
+    
+        $response = Http::withToken(Session::get('jwt'))
+            ->post(config('services.identity.url') . "/reservas?restauranteId=" . $restaurantId, $data);
+    
+        if (!$response->successful()) {
+            return back()->withErrors(['error' => 'No se pudo crear la reserva.'])->withInput();
+        }
+         // Se espera que la API retorne un código de reserva en el cuerpo de respuesta
+        $result = $response->json();
+        return redirect()->route('reservations.list')
+            ->with('success', 'Reserva creada con código: ' . ($result['code'] ?? ''));
+    }
+
+     // Método para actualizar el estado de una reserva (ya existente)
+     public function updateStatus(Request $request, $id)
+     {
+         $data = $request->validate([
+             'estado' => 'required|string',
+         ]);
+
+         $url = config('services.identity.url') . "/reservas/{$id}/{$data['estado']}";
+ 
+         $response = Http::withToken(Session::get('jwt'))->put($url);
+ 
+         if (!$response->successful()) {
+             return back()->withErrors(['error' => 'No se pudo actualizar el estado de la reserva.']);
+         }
+ 
+         return redirect()->back()->with('success', 'Estado actualizado correctamente.');
+     }
+     public function filter(Request $request)
+{
+    // Si no se envían filtros, por defecto estado 'Pendiente'
+    $estado = $request->input('estado', 'Pendiente');
+    // Usamos null en lugar de cadena vacía para fecha
+    $fechaDesde = $request->input('fechaDesde') ?: null;
+    $fechaHasta = $request->input('fechaHasta') ?: null;
+    $nombre = $request->input('nombre') ?: null;
+
+    // Armar la condición de filtro (solo se añaden los que tengan valor)
+    $filters = [];
+    if ($estado) {
+        $filters[] = "Estado eq '$estado'";
+    }
+    $today    = Carbon::today()->setTime(0,0,0)->toIso8601String();
+    $tomorrow = Carbon::tomorrow()->setTime(0,0,0)->toIso8601String();
+    if ($fechaDesde && $fechaDesde >= $today) {
+        $filters[] = "FechaReserva ge $fechaDesde";
+    } elseif ($fechaDesde) {
+        $filters[] = "FechaReserva ge $today";
+    }
+       $today    = Carbon::today()->setTime(0,0,0)->toIso8601String();
+    $tomorrow = Carbon::tomorrow()->setTime(0,0,0)->toIso8601String();
+    if ($fechaHasta && $fechaHasta <= $tomorrow) {
+        $filters[] = "FechaReserva le $fechaHasta";
+    } elseif ($fechaHasta) {
+        $filters[] = "FechaReserva le $tomorrow";
+    }
+    
+    if ($nombre) {
+        $filters[] = "contains(NombreCliente, '$nombre')";
+    }
+
+    // Si se armó algún filtro, los concatenamos con " and "
+    $filterString = count($filters) > 0 ? implode(' and ', $filters) : "";
+
+    // Parámetros para OData, utilizando la notación estándar:
+    $pageSize = $request->input('pageSize', '10');
+    $page = $request->input('page', '1');
+    $orderBy = $request->input('orderBy', 'FechaReserva');
+
+    $params = [];
+    if ($filterString) {
+        $params['$filter'] = $filterString; // ej: Estado eq 'Pendiente'
+    }
+    $params['$top'] = $pageSize;
+    $params['page'] = $page;           // Si tu API no espera "page", puedes omitirlo.
+    $params['$orderby'] = $orderBy;
+
+    // Construir la URL usando http_build_query para codificar los parámetros correctamente
+    $url = config('services.identity.url') . "/odata/Reservas?" . http_build_query($params);
+    
+    // Para depurar, podrías dd($url);
+    // dd($url);
+
+    $response = Http::withToken(Session::get('jwt'))->get($url);
+
+    if($response->successful()){
+        $reservas = $response->json();
+        return view('reservations.list', compact('reservas'));
+    } else {
+        return back()->withErrors(['error' => 'Error al obtener reservas filtradas.']);
+    }
+}
+}
