@@ -97,4 +97,5 @@ public function register(Request $request)
 
     return redirect()->route('/')->with('success', 'Registro exitoso. Bienvenido, '.$name);
 }
+
 }

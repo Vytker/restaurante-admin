@@ -9,26 +9,41 @@ use Carbon\Carbon;
 
 class ReservationController extends Controller
 {
-    public function listReservations()
-    {
-        // Se asume que en la sesión se guardó 'restaurante_id' y 'jwt'
-        $restaurantId = Session::get('restaurante_id');
-        $response = Http::withToken(Session::get('jwt'))
-            ->get(config('services.identity.url') . "/odata/Reservas", [
-                // Aunque el endpoint utiliza el token para obtener el restaurante,
-                // se puede enviar el parámetro para claridad (opcional)
-                'restauranteId' => $restaurantId
-            ]);
-            
-        if (!$response->ok()) {
-            return back()->withErrors(['error' => 'No se pudieron obtener las reservas.']);
-        }
-        
-        // Se espera que API retorne un array de reservas
-        $reservas = $response->json();
-        
-        return view('reservations.list', compact('reservas', 'restaurantId'));
+
+public function listReservations(Request $request)
+{
+    $restaurantId = Session::get('restaurante_id');
+    $jwt          = Session::get('jwt');
+
+    // 1) Leer página y tamaño desde la query
+    $page     = max(1, (int) $request->input('page', 1));
+    $pageSize = max(1, (int) $request->input('pageSize', 10));
+    $skip     = ($page - 1) * $pageSize;
+
+    // 2) Construir la URL OData con $top y $skip
+    $query = http_build_query([
+      'restauranteId' => $restaurantId,
+      '$top'          => $pageSize,
+      '$skip'         => $skip,
+      // …añade aquí filtros adicionales si los tienes…
+    ]);
+    $url = config('services.identity.url') . "/odata/Reservas?{$query}";
+
+    // 3) Petición y parseo
+    $resp = Http::withToken($jwt)->get($url);
+    if (! $resp->ok()) {
+        return back()->withErrors(['error'=>'No se pudieron obtener las reservas']);
     }
+    $data     = $resp->json();
+    $reservas = $data['value'] ?? $data;  // si viene wrapper OData, si no igual es array
+
+    // 4) Indicar a la vista la página actual y el tamaño
+    return view('reservations.list', [
+        'reservas' => $reservas,
+        'page'     => $page,
+        'pageSize' => $pageSize,
+    ]);
+}
             // Mostrar el formulario de creación de reserva
     // Al pasar la fecha (opcional vía query string) se consultan los turnos disponibles
     public function createReservation(Request $request)
@@ -158,4 +173,102 @@ class ReservationController extends Controller
         return back()->withErrors(['error' => 'Error al obtener reservas filtradas.']);
     }
 }
+ public function listTurnos(Request $request)
+    {
+        $restaurantId = Session::get('restaurante_id');
+
+        $response = Http::withToken(Session::get('jwt'))
+            ->get(config('services.identity.url') . "/turnos", [
+                'restauranteId' => $restaurantId   // opcional: el API usa el claim
+            ]);
+
+        $turnos = $response->json();
+
+        return view('turnos.list', compact('turnos'));
+    }
+
+    /**
+     * GET /turnos/crear      (sin $id)
+     * GET /turnos/{id}/editar (con $id)
+     * Muestra el formulario para alta o edición
+     */
+    public function editTurno(Request $request, $id = null)
+    {
+        $turno = null;
+
+        if ($id) {
+            $restaurantId = Session::get('restaurante_id');
+
+            $resp = Http::withToken(Session::get('jwt'))
+                ->get(config('services.identity.url') . "/turnos/{$id}", [
+                    'restauranteId' => $restaurantId   // el backend lo pide por query
+                ]);
+
+            if ($resp->ok()) {
+                $turno = $resp->json();
+            } else {
+                return back()->withErrors(['error' => 'Turno no encontrado.']);
+            }
+        }
+
+        return view('turnos.form', compact('turno'));
+    }
+
+    /**
+     * POST /turnos          → crear
+     * PUT  /turnos/{id}     → actualizar
+     */
+    public function saveTurno(Request $request, $id = null)
+    {
+        $data = $request->validate([
+            'nombre'      => 'required|string|max:100',
+            'horaInicio'  => 'required|date_format:H:i',
+            'horaFin'     => 'required|date_format:H:i|after:horaInicio',
+            'capacidad'       => 'required|integer|min:1',
+        ]);
+
+        // nota: el API infiere el restaurante desde el JWT
+        $jwt = Session::get('jwt');
+        $baseUrl = config('services.identity.url') . "/turnos";
+
+        if ($id) {
+            // --- UPDATE ---
+            $apiResp = Http::withToken($jwt)->put("{$baseUrl}/{$id}", $data);
+            $failMsg    = 'No se pudo actualizar el turno.';
+            $successMsg = 'Turno actualizado correctamente.';
+        } else {
+            // --- CREATE ---
+            $apiResp = Http::withToken($jwt)->post($baseUrl, $data);
+            $failMsg    = 'No se pudo crear el turno.';
+            $successMsg = 'Turno creado correctamente.';
+        }
+
+        if (! $apiResp->successful()) {
+            return back()->withErrors(['error' => $failMsg])->withInput();
+        }
+
+        return redirect()->route('turnos.list')->with('success', $successMsg);
+    }
+    /**
+     * DELETE /turnos/{id}
+     */
+    public function deleteTurno(Request $request, $id)
+{
+    // Confirmación extra del lado servidor (opcional)
+    if (! $id) {
+        return back()->withErrors(['error' => 'Id de turno inválido.']);
+    }
+
+    $jwt = Session::get('jwt');
+    $baseUrl = config('services.identity.url') . '/turnos';   // /api/turnos si tu prefijo no lo trae
+
+    $response = Http::withToken($jwt)->delete("{$baseUrl}/{$id}");
+
+    if (! $response->successful()) {
+        return back()->withErrors(['error' => 'No se pudo eliminar el turno.']);
+    }
+
+    return redirect()->route('turnos.list')->with('success', 'Turno eliminado correctamente.');
+}
+
 }

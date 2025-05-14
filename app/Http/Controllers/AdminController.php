@@ -90,4 +90,26 @@ class AdminController extends Controller
     
     return back()->with('success', 'Usuario asignado exitosamente.');
 }
+
+public function selectRestaurant(Request $request)
+{
+    $restaurantId = $request->input('restaurant_id');
+    if (!$restaurantId) {
+        return back()->withErrors(['error' => 'No se recibió el ID del restaurante.']);
+    }
+    // Guardar el ID en la sesión para usarlo en otras vistas (reservas, staff, etc.)
+    session()->put('restaurante_id', $restaurantId);
+
+    // Redirigir a una vista de dashboard o detalles del restaurante
+    return redirect()->route('admin.restaurants')->with('success', 'Restaurante seleccionado correctamente.');
+}
+
+public function deselectRestaurant(Request $request)
+{
+    // Eliminar el restaurante seleccionado de la sesión
+    session()->forget('restaurante_id');
+    
+    return redirect()->route('admin.restaurants')
+                     ->with('success', 'Restaurante deseleccionado correctamente.');
+}
 }

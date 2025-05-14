@@ -86,6 +86,32 @@
             @endforeach
         </tbody>
     </table>
+    <div class="d-flex mt-3 justify-content-between">
+  @isset($page)
+    <div class="d-flex mt-3 justify-content-between">
+      @if($page > 1)
+        <a href="{{ route('reservations.list', [
+              'page'     => $page - 1, 
+              'pageSize' => $pageSize
+            ]) }}"
+           class="btn btn-secondary">
+          « Anterior
+        </a>
+      @else
+        <span></span>
+      @endif
+
+      @if(count($reservas) >= $pageSize)
+        <a href="{{ route('reservations.list', [
+              'page'     => $page + 1,
+              'pageSize' => $pageSize
+            ]) }}"
+           class="btn btn-primary">
+          Siguiente »
+        </a>
+      @endif
+    </div>
+  @endisset
     @else
         <p>No hay reservas registradas.</p>
     @endif

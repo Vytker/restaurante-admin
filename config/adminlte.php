@@ -63,7 +63,7 @@ return [
     |
     */
 
-    'logo' => '<b>Admin</b>LTE',
+    'logo' => '<b>Portal</b>Restaurante',
     'logo_img' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
     'logo_img_class' => 'brand-image img-circle elevation-3',
     'logo_img_xl' => null,
@@ -257,11 +257,11 @@ return [
     */
 
     'use_route_url' => false,
-    'dashboard_url' => 'home',
+    'dashboard_url' => '/',
     'logout_url' => 'logout',
     'login_url' => 'login',
     'register_url' => 'register',
-    'password_reset_url' => 'password/reset',
+    'password_reset_url' => '/password',
     'password_email_url' => 'password/email',
     'profile_url' => false,
     'disable_darkmode_routes' => false,
@@ -300,11 +300,7 @@ return [
 
     'menu' => [
         // Navbar items:
-        [
-            'type' => 'navbar-search',
-            'text' => 'search',
-            'topnav_right' => true,
-        ],
+        
         [
             'type' => 'fullscreen-widget',
             'topnav_right' => true,
@@ -320,7 +316,7 @@ return [
         ['header' => 'main_navigation'],
         [
             'text' => 'Inicio',
-            'url' => '/',
+            'url' => '/dashboard',
             'icon' => 'fas fa-fw fa-tachometer-alt',
         ],
         [
@@ -340,13 +336,7 @@ return [
             'url' => 'admin/blog',
             'can' => 'manage-blog',
         ],
-        [
-            'text' => 'pages',
-            'url' => 'admin/pages',
-            'icon' => 'far fa-fw fa-file',
-            'label' => 4,
-            'label_color' => 'success',
-        ],
+        
         [
             'text' => 'Restaurantes',
             'url'  => 'admin/restaurants',
@@ -391,15 +381,34 @@ return [
             'route' => 'reservations.create', // Usa el nombre de ruta definido en web.php
             'icon'  => 'fas fa-fw fa-calendar-plus',
         ],
-        ['header' => 'account_settings'],
         [
-            'text' => 'profile',
-            'url' => 'account/settings',
+            'text' => 'Listar Turnos Reservas',
+            'route' => 'turnos.list', // Usa el nombre de ruta definido en web.php
+            'icon'  => 'fas fa-fw fa-calendar-check',
+        ],
+        ['header' => 'Configuración'],
+        [
+            'text' => 'Roles y Permisos',
+            'url'  => '#',
+            'icon' => 'fas fa-fw fa-user-shield',
+            //can owner solo
+        ],
+        [
+            'text' => 'Configuración de la Aplicación',
+            'url'  => '#',
+            'icon' => 'fas fa-fw fa-cogs',
+            //can owner solo
+        ],
+        
+        ['header' => 'Ajustes de Usuario'],
+        [
+            'text' => 'Perifl',
+            'url' => '/perfil',
             'icon' => 'fas fa-fw fa-user',
         ],
         [
-            'text' => 'change_password',
-            'url' => 'account/settings',
+            'text' => 'Cambiar Contraseña',
+            'url' => '/password',
             'icon' => 'fas fa-fw fa-lock',
         ],
         
