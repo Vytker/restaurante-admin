@@ -349,32 +349,60 @@ return [
             'icon' => 'fas fa-fw fa-plus-circle',
             'can'  => 'view-admin-restaurants', // Se muestra solo para los roles permitidos
         ],
-        ['header' => 'Ajustes Restaurante'],
+        ['header' => 'Ajustes Restaurante', 'can' => 'view-owner'], // Este header se mostrará solo si el usuario tiene el Gate 'view-owner'
         [
             'text' => 'Añadir Staff',
             'url'  => 'restaurants/{restaurantId}/staff',
             'icon' => 'fas fa-fw fa-user-plus',
-           
-           //can owner solo
+            'can' => 'view-owner-or-admin-restaurants',
         ],
         [
             'text' => 'Listar Staff',
             'url'  => 'restaurants/{restaurantId}/staff/list',
             'icon' => 'fas fa-fw fa-users',
-            //can owner solo
+            'can' => 'view-owner-or-admin-restaurants',
+
+        ],
+        ['header' => 'Gestión de Horarios'],
+        [
+            'text' => 'Gestionar Horarios',
+            'url'  => 'gestion-horarios',
+            'icon' => 'fas fa-fw fa-clock',
+            'can' => 'view-owner-or-admin-restaurants',
+        ],
+        //ver calendario solo lectura de staff
+        [
+            'text' => 'Calendario',
+            'url'  => 'staff/calendar',
+            'icon' => 'fas fa-fw fa-calendar',
+            'can'  => 'view-staff', // Este Gate se evaluará para mostrar el menú
+            //can staff solo
         ],
         [
-            'text' => 'Configuración de Restaurante',
-            'url'  => '#',
-            'icon' => 'fas fa-fw fa-cog',
-            //can owner solo
+            'text' => 'Mis Turnos',
+            'url'  => 'staff/my-shifts',
+            'icon' => 'fas fa-fw fa-calendar-check',
+            'can'  => 'view-staff', // Este Gate se evaluará para mostrar el menú
+            //can staff solo
+        ],
+        ['header' => 'Gestion Slots','can' => 'view-owner-or-admin-restaurants',], 
+        [
+            'text' => 'Listar Slots',
+            'url'  => 'slots',
+            'icon' => 'fas fa-fw fa-calendar',
+            'can' => 'view-owner-or-admin-restaurants',
+        ],
+        [
+            'text' => 'Crear Slot',
+            'url'  => 'slots/create',
+            'icon' => 'fas fa-fw fa-plus-circle',
+            'can' => 'view-owner-or-admin-restaurants',
         ],
         ['header' => 'Reservas'],
         [
             'text' => 'Listar Reservas',
             'url'  => 'reservas',
             'icon' => 'fas fa-fw fa-calendar-alt',
-            //can owner solo
         ],
         [
             'text' => 'Crear Reserva',
@@ -385,21 +413,9 @@ return [
             'text' => 'Listar Turnos Reservas',
             'route' => 'turnos.list', // Usa el nombre de ruta definido en web.php
             'icon'  => 'fas fa-fw fa-calendar-check',
+            'can' => 'view-owner-or-admin-restaurants',
         ],
-        ['header' => 'Configuración'],
-        [
-            'text' => 'Roles y Permisos',
-            'url'  => '#',
-            'icon' => 'fas fa-fw fa-user-shield',
-            //can owner solo
-        ],
-        [
-            'text' => 'Configuración de la Aplicación',
-            'url'  => '#',
-            'icon' => 'fas fa-fw fa-cogs',
-            //can owner solo
-        ],
-        
+
         ['header' => 'Ajustes de Usuario'],
         [
             'text' => 'Perifl',

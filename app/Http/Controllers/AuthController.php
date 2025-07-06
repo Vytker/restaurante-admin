@@ -41,11 +41,15 @@ class AuthController extends Controller
         $name = $decoded->unique_name; // Ajusta según la estructura de tu JWT
         $restaurante_id = $decoded->restauranteId; // Ajusta según la estructura de tu JWT
         $rol = $decoded->{'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'} ; // Ajusta según la estructura de tu JWT
+        $employee_id = $decoded->sub; // Ajusta según la estructura de tu JWT
+
+    
         Session::put([
             'jwt'  => $token,
             'unique_name' => $name,
             'restaurante_id' => $restaurante_id,
             'role' => $rol,
+            'employee_id' => $employee_id,
         ]);
 
         return redirect()->intended('/');
@@ -63,39 +67,93 @@ class AuthController extends Controller
         return redirect()->route('login');
     
 }
-public function register(Request $request)
-{
-    // 1) Validación Laravel (antes de llamar al API)
-    $validator = Validator::make($request->all(), [
-        'username' => 'required|min:3|max:30',
-        'email'    => 'required|email',
-        'password' => 'required|min:6|confirmed',
-    ]);
 
-    if ($validator->fails()) {
-        return back()->withErrors($validator)->withInput();
+
+ // Vista para que staff complete su perfil
+    public function showCompleteForm(Request $request)
+    {
+        $token = $request->query('token');
+        if (! $token) {
+            abort(400, 'Token de invitación faltante.');
+        }
+        return view('auth.complete-profile', ['inviteToken' => $token]);
     }
 
-    // 2) Llamada al API Identity (.NET)
-    $response = Http::post(
-        config('services.identity.url').'/register',
-        $request->only('username', 'email', 'password')
-    );
 
-    if (! $response->created()) {      // 201 esperado
-        // Convierte errores del API a mensaje UX; ajusta según tu payload
-        $msg = $response->json('message') ?? 'Registro no disponible';
-        return back()->withErrors(['auth' => $msg])->withInput();
+
+  public function register(Request $request)
+    {
+        // Si viene invite_token → completado de perfil
+        if ($request->has('invite_token')) {
+            $payload = $request->validate([
+                'invite_token'     => 'required|string',
+                'username'              => 'required|string|min:3|max:30',
+                'first_name'       => 'required|string',
+                'last_name'        => 'required|string',
+                'password'         => 'required|string|min:8|confirmed',
+                'password_confirmation'  => 'required|string|min:8',
+            ]);
+
+            $dataToSend = [
+                'InviteToken'      => $payload['invite_token'],
+                'UserName'         => $payload['username'],       
+                'FirstName'        => $payload['first_name'],
+                'LastName'         => $payload['last_name'],
+                'Password'         => $payload['password'],
+                'PasswordConfirm'  => $payload['password_confirmation'],
+            ];
+
+            $response = Http::post(
+                config('services.identity.url').'/auth/register',
+                $dataToSend
+            );
+            // 4) Si falla, vuelve al formulario con los errores
+            if (! $response->ok()) {
+                $errors = $response->json('errors') 
+                        ?? ['complete' => $response->body()];
+                return back()
+                    ->withErrors($errors)
+                    ->withInput();
+            }
+
+             return view('auth.complete-profile', [
+        'inviteToken' => $payload['invite_token'],
+        'completed'   => true,                    // indicador de éxito
+    ])->with('success', 'Tu perfil se ha completado correctamente. Ya puedes iniciar sesión.');
+
+        } else {
+            // Flujo de invitación (Owner/SuperAdmin)
+            $payload = $request->validate([
+                'email'             => 'required|email',
+                'username'          => 'required|min:3|max:30',
+                'password'          => 'required|min:8|confirmed',
+                'role'              => 'required|in:Staff,Owner', 
+            ]);
+
+            // Prepara datos en el formato .NET
+            $dataToSend = [
+                'Email'              => $payload['email'],
+                'UserName'           => $payload['username'],
+                'Password'           => $payload['password'],
+                'PasswordConfirm'    => $payload['password_confirmation'],
+                'Role'               => $payload['role'],
+            ];
+
+            // Llamada con Bearer: tomamos el JWT del Owner de la sesión
+            $jwt = Session::get('jwt');
+            $response = Http::withToken($jwt)
+                ->post(config('services.identity.url').'/auth/register', $dataToSend);
+
+            if (! $response->ok()) {
+                return back()
+                    ->withErrors(['invite' => $response->json('errors') ?? $response->body()])
+                    ->withInput();
+            }
+
+            // El API no devuelve el token aquí, solo un mensaje
+            return back()->with('success',
+                'Invitación enviada correctamente. El usuario recibirá un email.');
+        }
     }
-
-    // 3) Auto-login: tu API suele devolver también el JWT
-    $data  = $response->json();
-    $token = $data['token'];
-    $name  = $data['user']['name'];
-
-    $request->session()->put(['jwt' => $token, 'name' => $name]);
-
-    return redirect()->route('/')->with('success', 'Registro exitoso. Bienvenido, '.$name);
-}
 
 }

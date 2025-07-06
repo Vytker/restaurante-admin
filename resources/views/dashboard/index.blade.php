@@ -4,56 +4,18 @@
 
 @section('content')
 <div class="container mt-4">
-  <h1>Inicio</h1>
+   <h2>INICIO </h2>
+  <p class="lead">Bienvenido al panel de control del restaurante. <span>{{ session('unique_name') }}</span></p>
 
-  {{-- FILTROS --}}
-  <form method="GET" action="{{ route('dashboard.index') }}" class="row g-3 mb-4">
-    @if($restaurantes->count()>1)
-      <div class="col-md-2">
-        <label class="form-label">Restaurante</label>
-        <select name="restauranteId" class="form-select">
-          @foreach($restaurantes as $r)
-            <option value="{{ $r['id'] }}" {{ $r['id']===$restauranteId?'selected':'' }}>
-              {{ $r['nombre'] }}
-            </option>
-          @endforeach
-        </select>
-      </div>
-    @endif
-
-    <div class="col-md-2">
-      <label class="form-label">Ver por</label>
-      <select name="filterType" id="filterType" class="form-select" onchange="onFilterTypeChange()">
-        <option value="day"   {{ $filterType==='day'   ?'selected':'' }}>Día</option>
-        <option value="week"  {{ $filterType==='week'  ?'selected':'' }}>Semana</option>
-        <option value="month" {{ $filterType==='month' ?'selected':'' }}>Mes</option>
-      </select>
-    </div>
-
-    <div class="col-md-2" id="divDate">
-      <label class="form-label">Fecha base</label>
-      <input type="date" name="baseDate" class="form-control" value="{{ $baseDate }}">
-    </div>
-    <div class="col-md-2 d-none" id="divMonth">
-      <label class="form-label">Mes</label>
-      <input type="month" name="baseMonth" class="form-control" value="{{ $baseMonth }}">
-    </div>
-
-    <div class="col-md-2">
-      <label class="form-label">Estado</label>
-      <select name="estado" class="form-select">
-        <option value=""           {{ $estado===''           ?'selected':'' }}>Todas</option>
-        <option value="Pendiente"  {{ $estado==='Pendiente'  ?'selected':'' }}>Pendiente</option>
-        <option value="Confirmada" {{ $estado==='Confirmada' ?'selected':'' }}>Confirmada</option>
-        <option value="Cancelada"  {{ $estado==='Cancelada'  ?'selected':'' }}>Cancelada</option>
-      </select>
-    </div>
-
-    <div class="col-md-2 d-flex align-items-end">
-      <button class="btn btn-primary w-100">Aplicar filtros</button>
-    </div>
-  </form>
-
+@if (session('error'))
+  <div class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ session('error') }}
+    <button type="button" class="btn-close" data-dismiss="alert" aria-label="Cerrar">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+@endif
+ 
   {{-- TOTALES --}}
   <div class="row mb-4">
     <div class="col-md-6">
@@ -124,10 +86,65 @@
 
   </div>
 </div>
+
+ <div class="d-flex justify-content-center align-items-center my-4 w-100">
+    <div class="card shadow-lg flex-grow-1" style="max-width: 700px; width:100%;">
+      <div class="card-body">
+
+ {{-- FILTROS --}}
+<div class="card shadow-sm my-4" style="max-width: 700px; margin:auto;">
+  <div class="card-body">
+    <form method="GET" action="{{ route('dashboard.index') }}" class="row align-items-end">
+      
+      <div class="col-md-4">
+        <label class="form-label">Mes</label>
+        <select name="baseMonth" class="form-select form-select-lg">
+          @foreach(range(1,12) as $monthNumber)
+            @php
+              $monthName = \Carbon\Carbon::create()->month($monthNumber)->locale('es')->monthName;
+              $selected = ($monthNumber == \Carbon\Carbon::parse($baseMonth)->month) ? 'selected' : '';
+            @endphp
+            <option value="{{ now()->year }}-{{ str_pad($monthNumber,2,'0',STR_PAD_LEFT) }}" {{ $selected }}>
+              {{ ucfirst($monthName) }}
+            </option>
+          @endforeach
+        </select>
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Estado</label>
+        <select name="estado" class="form-select form-select-lg ">
+          <option value="" {{ $estado===''?'selected':'' }}>Todas</option>
+          <option value="Pendiente" {{ $estado==='Pendiente'?'selected':'' }}>Pendiente</option>
+          <option value="Confirmada" {{ $estado==='Confirmada'?'selected':'' }}>Confirmada</option>
+          <option value="Cancelada" {{ $estado==='Cancelada'?'selected':'' }}>Cancelada</option>
+        </select>
+      </div>
+
+      <div class="col-md-4 text-center">
+        <button class="btn btn-primary btn-lg rounded-pill w-100">Aplicar filtros</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+
+
+</div>
+ 
+
+  </div>
+
+</div>
+
 @endsection
 
 @section('css')
 <style>
+  .card-body {
+  overflow: hidden; /* asegura que nada salga fuera del card */
+}
   .heatmap-header {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -140,7 +157,8 @@
 /* Cada celda se dimensiona de manera proporcional */
 .calendar-cell {
   position: relative;
-  padding-top: 100%;
+  padding-top: 14%;
+  width: 100%;
 }
 .calendar-cell-inner {
   position: absolute;
@@ -151,7 +169,9 @@
   border-radius: 4px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
   padding: 2px;
 }
 .calendar-cell-label {
@@ -160,15 +180,21 @@
   color: #fff;
 }
 .calendar-cell-total {
-  font-size: 0.7em;
+  font-size: 0.8em;
+  font-weight: bold;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   color: #fff;
   align-self: flex-end;
 }
   .heatmap-grid {
-      display: grid;
+  display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
+  height: 100%;
+  overflow: hidden;
   width: 100%;
+  
   }
   .heatmap-cell { padding-top:100%; position:relative; }
   .heatmap-cell-inner {

@@ -16,7 +16,7 @@ class AdminController extends Controller
         }
         
         // Llamar al endpoint del servicio identity para obtener todos los restaurantes.
-        // Se asume que dicho endpoint es /restaurants y que requiere enviar el token JWT en la cabecera.
+        // Se asume que dicho endpoint es /restaurantes y que requiere enviar el token JWT en la cabecera.
         $response = Http::withToken(Session::get('jwt'))
             ->get(config('services.identity.url').'/restaurantes');
         

@@ -1,11 +1,11 @@
-{{-- filepath: c:\Users\Vytenis\Desktop\tfg\restaurante-admin\resources\views\restaurants\assign-staff.blade.php --}}
+{{-- filepath: c:\Users\Vytenis\Desktop\tfg\restaurante-admin\resources\views\restaurants/assign-staff.blade.php --}}
 @extends('adminlte::page')
 
 @section('title', 'Asignar Staff')
 
 @section('content')
 <div class="container mt-4">
-  <div class="card">
+  <div class="card shadow-sm">
     <div class="card-header bg-primary text-white">
       <h3 class="card-title mb-0">Asignar Staff al Restaurante</h3>
     </div>
@@ -26,15 +26,24 @@
         </div>
       @endif
 
-      <form action="{{ route('restaurants.staff.assign', ['restaurantId' => $restaurantId]) }}" method="POST">
+      <form action="{{ route('restaurants.staff.assign', $restaurantId) }}" method="POST">
         @csrf
-
-        <div class="form-group">
-          <label for="Email">Email del empleado</label>
-          <input type="text" name="Email" id="Email" value="{{ old('Email') }}" required class="form-control" placeholder="Ingrese el email">
+        <div class="mb-3">
+          <label for="email" class="form-label">Email del nuevo staff</label>
+          <input 
+            type="email" 
+            name="email" 
+            id="email" 
+            class="form-control" 
+            placeholder="Ingrese el correo del nuevo staff" 
+            value="{{ old('email') }}" 
+            required>
         </div>
-
-        <button type="submit" class="btn btn-primary">Asignar Staff</button>
+        <div class="d-grid">
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-user-plus me-1"></i> Asignar Staff
+          </button>
+        </div>
       </form>
     </div>
   </div>

@@ -25,7 +25,7 @@
     <form method="GET" action="{{ route('reservations.create') }}">
          <div class="form-group">
              <label for="fecha">Fecha</label>
-             <input type="date" id="fecha" name="fecha" value="{{ $fecha }}" class="form-control" onchange="this.form.submit()">
+             <input type="date" id="fecha" name="fecha" value="{{ $fecha }}" class="form-control" min="{{date('Y-m-d')}}" onchange="this.form.submit()">
          </div>
     </form>
     

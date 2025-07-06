@@ -57,6 +57,7 @@ public function listReservations(Request $request)
             ->get(config('services.identity.url') . "/reservas/slots", [
                 'restauranteId' => $restaurantId,
                 'fecha' => $fecha,
+
             ]);
         $slots = [];
         if ($response->ok()) {
@@ -214,10 +215,6 @@ public function listReservations(Request $request)
         return view('turnos.form', compact('turno'));
     }
 
-    /**
-     * POST /turnos          → crear
-     * PUT  /turnos/{id}     → actualizar
-     */
     public function saveTurno(Request $request, $id = null)
     {
         $data = $request->validate([
@@ -229,22 +226,37 @@ public function listReservations(Request $request)
 
         // nota: el API infiere el restaurante desde el JWT
         $jwt = Session::get('jwt');
+        $role = Session::get('role');
+        $restaurantId = Session::get('restaurante_id');
+        
         $baseUrl = config('services.identity.url') . "/turnos";
 
         if ($id) {
             // --- UPDATE ---
-            $apiResp = Http::withToken($jwt)->put("{$baseUrl}/{$id}", $data);
+            $url = config('services.identity.url') . "/turnos/{$id}";
+            if($role === "SuperAdmin"){
+                $url .= '?'.http_build_query(['restauranteId'=>$restaurantId]);
+            }
+            $apiResp = Http::withToken($jwt)->put($url, $data);
             $failMsg    = 'No se pudo actualizar el turno.';
             $successMsg = 'Turno actualizado correctamente.';
         } else {
             // --- CREATE ---
+            if($role === "SuperAdmin"){
+                $data['restauranteId'] = $restaurantId; // el API lo espera en el body
+            }
             $apiResp = Http::withToken($jwt)->post($baseUrl, $data);
             $failMsg    = 'No se pudo crear el turno.';
             $successMsg = 'Turno creado correctamente.';
         }
 
         if (! $apiResp->successful()) {
-            return back()->withErrors(['error' => $failMsg])->withInput();
+              // Intenta extraer un mensaje JSON { error : "..."}
+            $apiMsg = $apiResp->json('error')
+              ?? $apiResp->json('mensaje')
+              ?? $apiResp->body();        // texto plano
+
+            return back()->withErrors(['error' => $apiMsg])->withInput();
         }
 
         return redirect()->route('turnos.list')->with('success', $successMsg);
@@ -260,9 +272,15 @@ public function listReservations(Request $request)
     }
 
     $jwt = Session::get('jwt');
-    $baseUrl = config('services.identity.url') . '/turnos';   // /api/turnos si tu prefijo no lo trae
+    $role        = Session::get('role');
+    $restaurantId= Session::get('restaurante_id');
 
-    $response = Http::withToken($jwt)->delete("{$baseUrl}/{$id}");
+    $baseUrl = config('services.identity.url') . '/turnos';   // /api/turnos si tu prefijo no lo trae
+    $url = config('services.identity.url')."/turnos/{$id}";
+ if ($role === 'SuperAdmin') {
+         $url .= '?'.http_build_query(['restauranteId'=>$restaurantId]);
+    }
+    $response = Http::withToken($jwt)->delete($url);
 
     if (! $response->successful()) {
         return back()->withErrors(['error' => 'No se pudo eliminar el turno.']);

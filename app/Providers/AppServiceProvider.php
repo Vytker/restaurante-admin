@@ -25,5 +25,17 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('view-admin-restaurants', function ($user = null) {
             return session('role') === 'SuperAdmin';
         });
+
+         Gate::define('view-owner', function ($user = null) {
+            return session('role') === 'Owner';
+        });
+
+         Gate::define('view-staff', function ($user = null) {
+            return session('role') === 'Staff';
+        });
+
+        Gate::define('view-owner-or-admin-restaurants', function($user = null) {
+        return session('role') === 'Owner' ||session('role') === 'SuperAdmin';
+    });
     }
 }

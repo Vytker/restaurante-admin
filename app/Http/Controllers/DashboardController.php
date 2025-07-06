@@ -16,8 +16,8 @@ class DashboardController extends Controller
         $restaurantes  = collect(Session::get('restaurantes'));
         $restauranteId = $request->query('restauranteId', Session::get('restaurante_id'));
 
-        // 1) Leer filtros, con default: día + Confirmada
-        $filterType = $request->query('filterType', 'day');      // day | week | month
+        //Leer filtros, con default: mes + Confirmada
+        $filterType = $request->query('filterType', 'month');      // day | week | month
         $estado     = $request->query('estado', 'Confirmada');   // '', Pendiente, Confirmada, Cancelada
         $baseDate   = $request->query('baseDate', now()->toDateString());
         $baseMonth  = $request->query('baseMonth', now()->format('Y-m'));
@@ -131,6 +131,7 @@ class DashboardController extends Controller
             // 6.5) Máximo para normalizar opacidad
             $maxCount = max(1, collect($calendarDays)->pluck('total')->max());
         }
+
 
         // 7) Renderizar vista
         return view('dashboard.index', compact(

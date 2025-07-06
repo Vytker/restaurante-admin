@@ -50,7 +50,9 @@
                       )
                     }}
                   </td>
+                  @if(session('role') !== 'Staff')
                 <td>
+                  
                     @if($reserva['estado'] == '0')
                         <form class="actionForm" action="{{ route('reservations.updateStatus', $reserva['id']) }}" method="POST" style="display:inline;">
                             @csrf
@@ -81,7 +83,9 @@
                     @else
                         <span class="text-muted">Sin acción</span>
                     @endif
+                  
                 </td>
+                @endif
             </tr>
             @endforeach
         </tbody>

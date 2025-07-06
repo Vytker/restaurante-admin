@@ -37,5 +37,7 @@ return [
 'identity' => [
     'url' => env('IDENTITY_API'),
 ],
-
+'horarios' => [
+        'url' => env('HORARIOS_API_URL', 'http://localhost:8000/api/v1/gestion-horarios'),
+    ],
 ];
